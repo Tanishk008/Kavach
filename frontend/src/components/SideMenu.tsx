@@ -27,7 +27,7 @@ export default function SideMenu({ open, onClose }: { open: boolean; onClose: ()
   const navigate = useNavigate();
   if (!open) return null;
   return (
-    <div className="absolute inset-0 z-30">
+    <div className="absolute inset-0 z-[1000]">
       <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
       <nav className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-surface shadow-xl">
         <div className="flex items-center gap-2 bg-navy px-4 py-4 text-white">

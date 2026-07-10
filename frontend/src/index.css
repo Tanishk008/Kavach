@@ -152,6 +152,7 @@
 
 .risk-map-container {
   position: relative;
+  z-index: 0;
   width: 100%;
   height: 310px;
   border-radius: 12px;
@@ -165,6 +166,12 @@
   width: 100%;
   height: 100%;
   font-family: inherit;
+}
+
+.risk-map-container .leaflet-pane,
+.risk-map-container .leaflet-top,
+.risk-map-container .leaflet-bottom {
+  z-index: 1;
 }
 
 .leaflet-tile { filter: brightness(0.92) saturate(0.85); }

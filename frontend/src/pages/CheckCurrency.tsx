@@ -22,13 +22,6 @@ export default function CheckCurrency() {
     }
   };
 
-  const badgeClass =
-    result?.authenticity === "real"
-      ? "bg-safe-bg text-safe"
-      : result?.authenticity === "fake"
-      ? "bg-highrisk-bg text-highrisk"
-      : "bg-caution-bg text-caution";
-
   return (
     <Layout>
       <h1 className="mb-3 text-xl font-semibold text-ink">Check currency</h1>
@@ -46,26 +39,12 @@ export default function CheckCurrency() {
       {error && <p className="mt-3 text-sm text-highrisk">{error}</p>}
 
       {result && (
-        <div className="card mt-4">
-          <p className="text-2xl font-semibold text-ink">₹{result.denomination ?? "—"}</p>
-          <span className={`mt-2 inline-block rounded-full px-3 py-1 text-sm font-semibold ${badgeClass}`}>
-            {result.authenticity === "real"
-              ? "Likely genuine"
-              : result.authenticity === "fake"
-              ? "Likely fake"
-              : "Uncertain — retake photo"}
-          </span>
-          <p className="mt-2 text-sm text-muted">{result.message}</p>
-          {result.features_checked.length > 0 && (
-            <details className="mt-3">
-              <summary className="cursor-pointer text-sm font-medium text-navy">Why?</summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
-                {result.features_checked.map((f, i) => (
-                  <li key={i}>{f}</li>
-                ))}
-              </ul>
-            </details>
-          )}
+        <div className="card mt-4 space-y-1.5 p-4 border bg-surface">
+          {result.message.split("\n").map((line, i) => (
+            <p key={i} className="text-sm font-medium text-ink whitespace-pre-wrap">
+              {line}
+            </p>
+          ))}
         </div>
       )}
     </Layout>

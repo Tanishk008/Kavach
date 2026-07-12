@@ -17,4 +17,6 @@ scikit-learn>=1.5.2
 numpy>=2.1.0
 requests==2.32.3
 tenacity==8.2.3
-
+torch>=2.0.0
+torchvision>=0.15.0
+Pillow>=10.0.0

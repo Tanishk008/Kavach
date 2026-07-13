@@ -1,41 +1,88 @@
 """Counterfeit currency detection (A.4).
 
-STUB: returns deterministic mock output behind the real contract. Replace
-`analyze_note()` internals with the two-stage CNN pipeline described in the spec
-(Stage 1 denomination classifier → Stage 2 denomination-specific authenticity model).
+Uses a trained PyTorch EfficientNet-B0 model to verify the authenticity of Indian currency notes.
 """
 from __future__ import annotations
+import logging
 
 from app.schemas.currency import CurrencyCheckResponse
+from app.ml.predictor import predict_image
+
+logger = logging.getLogger(__name__)
 
 _FEATURES = [
-    "security thread continuity",
-    "microprint sharpness",
-    "watermark placement",
-    "serial number font consistency",
+    "EfficientNet-B0 feature map validation",
+    "Texture and paper fiber pattern analysis",
+    "Security thread and watermark region assessment",
 ]
 
 
 def analyze_note(image_bytes: bytes, filename: str = "") -> CurrencyCheckResponse:
-    """TODO: real CV inference.
+    """Runs CV inference using the trained EfficientNet-B0 model.
 
-    1. Pre-check: is this even a currency note? If not → friendly rejection.
-    2. Stage 1 CNN: denomination (10/20/50/100/200/500/2000).
-    3. Stage 2 CNN (denomination-specific): authenticity + which features triggered.
+    Returns the classification result (real vs fake), confidence score, and descriptive message.
     """
     if not image_bytes:
         return CurrencyCheckResponse(
-            denomination=None, authenticity="uncertain", confidence=0.0,
+            denomination=None,
+            authenticity="uncertain",
+            confidence=0.0,
             features_checked=[],
             message="This doesn't look like a currency note — please try again.",
         )
 
-    # Deterministic mock so the UI flow is demoable without the model.
-    return CurrencyCheckResponse(
-        denomination="500",
-        authenticity="uncertain",
-        confidence=0.5,
-        features_checked=_FEATURES,
-        message=("Currency model not yet wired — this is a placeholder result. "
-                 "Retake the photo in good lighting for a real check."),
-    )
+    try:
+        # Run inference using the loaded model
+        result = predict_image(image_bytes)
+        
+        prediction = result["prediction"]  # "Real" or "Fake"
+        confidence_pct = result["confidence"]  # e.g., 96.83
+        
+        # Convert prediction to required lowercase format: "real" or "fake"
+        authenticity = prediction.lower()
+        
+        # Convert confidence to a 0.0 - 1.0 fraction
+        confidence_fraction = confidence_pct / 100.0
+
+        # Map confidence levels and recommendations from predict.py
+        if confidence_pct >= 95:
+            level = "VERY HIGH"
+            recommendation = "Model is highly confident."
+        elif confidence_pct >= 85:
+            level = "HIGH"
+            recommendation = "Prediction appears reliable."
+        elif confidence_pct >= 70:
+            level = "MODERATE"
+            recommendation = "Prediction is reasonably reliable."
+        elif confidence_pct >= 60:
+            level = "LOW"
+            recommendation = "Manual verification recommended."
+        else:
+            level = "UNCERTAIN"
+            recommendation = "Unable to classify confidently."
+
+        status_text = "Likely Genuine" if authenticity == "real" else "Likely Counterfeit/Fake"
+        message = (
+            f"Prediction: {status_text}\n"
+            f"Confidence: {confidence_pct:.2f}%\n"
+            f"Confidence Level: {level}\n"
+            f"Recommendation: {recommendation}"
+        )
+
+        return CurrencyCheckResponse(
+            denomination=None,  # Binary classifier does not predict denomination
+            authenticity=authenticity,
+            confidence=confidence_fraction,
+            features_checked=_FEATURES,
+            message=message,
+        )
+
+    except Exception as e:
+        logger.exception("Error during counterfeit currency check inference")
+        return CurrencyCheckResponse(
+            denomination=None,
+            authenticity="uncertain",
+            confidence=0.0,
+            features_checked=[],
+            message=f"Model analysis failed: {str(e)}. Please retry with a clearer photo in good lighting.",
+        )

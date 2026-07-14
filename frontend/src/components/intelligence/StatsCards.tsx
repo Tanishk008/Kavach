@@ -1,15 +1,16 @@
 import type { StatsData } from "../../api/intelligence";
+import { ShieldIcon, AlertTriangleIcon, MessageIcon, MapPinIcon } from "../Icons";
 
-const CRIME_TYPE_ICONS: Record<string, string> = {
-  "UPI Scam": "💳",
-  "Digital Arrest": "🚨",
-  "OTP Fraud": "🔐",
-  "Investment Scam": "📈",
-  "Phishing": "🎣",
-  "Online Banking Fraud": "🏦",
-  "Crypto Scam": "₿",
-  "WhatsApp Scam": "📱",
-  "Loan App Fraud": "💸",
+const CRIME_TYPE_ICONS: Record<string, React.ReactNode> = {
+  "UPI Scam": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "Digital Arrest": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "OTP Fraud": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "Investment Scam": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "Phishing": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "Online Banking Fraud": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "Crypto Scam": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
+  "WhatsApp Scam": <MessageIcon className="w-5 h-5 text-current"/>,
+  "Loan App Fraud": <AlertTriangleIcon className="w-5 h-5 text-current"/>,
 };
 
 function formatCurrency(amount: number): string {
@@ -49,28 +50,28 @@ export default function StatsCards({ stats, loading }: StatsCardsProps) {
       label: "Total Incidents",
       value: stats.total_events.toLocaleString(),
       sub: `+${stats.total_events_last_30_days} this month`,
-      icon: "🛡️",
+      icon: <ShieldIcon className="w-5 h-5 text-current"/>,
       color: "#ef4444",
     },
     {
       label: "Money Lost",
       value: formatCurrency(stats.total_money_lost_inr),
       sub: `${stats.total_victims.toLocaleString()} victims`,
-      icon: "💰",
+      icon: <AlertTriangleIcon className="w-5 h-5 text-current"/>,
       color: "#f59e0b",
     },
     {
       label: "Top Crime",
       value: topCrime?.crime_type ?? "—",
       sub: topCrime ? `${topCrime.count} incidents` : "",
-      icon: CRIME_TYPE_ICONS[topCrime?.crime_type ?? ""] ?? "⚠️",
+      icon: CRIME_TYPE_ICONS[topCrime?.crime_type ?? ""] ?? <AlertTriangleIcon className="w-5 h-5 text-current"/>,
       color: "#8b5cf6",
     },
     {
       label: "Most Affected",
       value: topState?.state ?? "—",
       sub: topState ? `Risk: ${topState.risk_score.toFixed(0)}/100` : "",
-      icon: "📍",
+      icon: <MapPinIcon className="w-5 h-5 text-current"/>,
       color: "#06b6d4",
     },
   ];

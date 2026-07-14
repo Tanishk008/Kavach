@@ -42,11 +42,23 @@ class PayCheckRequest(BaseModel):
 
 class PayCheckResponse(BaseModel):
     identifier: str
+    identifier_type: str = "unknown"       # upi | phone | account | unknown
     flagged: bool
     report_count: int = 0
     cluster_ref: str | None = None
     cluster_victim_count: int | None = None
     explanation: str
+    # UPI-specific enrichment
+    dataset_flagged: bool = False          # True if in hardcoded fraud dataset
+    upi_handle_trust: str | None = None   # verified | unverified | None (non-UPI)
+    upi_institution: str | None = None    # Bank/app name if handle is verified
+    pattern_score: int = 0                # 0-100 suspicious pattern score
+    pattern_signals: list[str] = []       # Matched suspicious keyword patterns
+    risk_score: int = 0                   # 0-100 overall risk score
+    verdict: str = "unknown"              # safe | suspicious | flagged
+    tips: list[str] = []
+    raw_records: list[str] = []            # sample known/reported fraud identifiers
+    emergency_contacts: list[dict[str, str]] = []
 
 
 class ReportRequest(BaseModel):

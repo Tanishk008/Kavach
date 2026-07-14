@@ -1,5 +1,6 @@
 import Layout from "../components/Layout";
-import { HeadsetIcon, MessageIcon, PhoneIcon, SearchIcon, ShieldIcon } from "../components/Icons";
+import BackHeader from "../components/BackHeader";
+import { HeadsetIcon, MessageIcon, PhoneIcon, SearchIcon } from "../components/Icons";
 
 const redFlags = [
   "Someone says you are under digital arrest or cannot disconnect the call.",
@@ -51,22 +52,7 @@ const evidenceItems = [
 export default function SafetyTips() {
   return (
     <Layout>
-      <section className="mb-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cream text-navy">
-            <ShieldIcon className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Safety guide</p>
-            <h1 className="text-2xl font-bold text-ink">Tips and how it works</h1>
-          </div>
-        </div>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          Use this as a quick action guide when something feels urgent, threatening, secretive, or
-          money-related. Kavach helps you slow the situation down and verify it.
-        </p>
-      </section>
-
+      <BackHeader title="Safety Tips" subtitle="A quick action guide when something feels urgent" />
       <section className="mb-4">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-muted">
           Scam red flags

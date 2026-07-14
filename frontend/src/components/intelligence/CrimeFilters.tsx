@@ -75,7 +75,7 @@ export default function CrimeFilters({
   return (
     <div className="filters-panel">
       <div className="filters-header">
-        <h3 className="filters-title">🔍 Filters</h3>
+        <h3 className="filters-title"> Filters</h3>
         <span className="event-badge">{eventCount} events</span>
       </div>
 

@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import BackHeader from "../components/BackHeader";
 
 export default function BlockPhone() {
-  const navigate = useNavigate();
   const [checkedItems, setCheckedItems] = useState({
     fir: false,
     sim: false,
@@ -18,21 +17,7 @@ export default function BlockPhone() {
 
   return (
     <Layout>
-      {/* ── Header ── */}
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-muted transition hover:bg-canvas"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-ink">Block Lost Phone</h1>
-          <p className="text-xs font-semibold text-navy">Via Gov. of India CEIR Portal</p>
-        </div>
-      </div>
+      <BackHeader title="Block Lost Phone" subtitle="Via Government of India CEIR Portal" />
 
       {/* ── Info Card ── */}
       <div className="mb-6 rounded-card border border-navy/20 bg-gradient-to-br from-navy/5 to-transparent px-4 py-4">
@@ -93,7 +78,7 @@ export default function BlockPhone() {
       <div className="mt-auto border-t border-hairline bg-surface pt-4">
         {!allReady && (
           <p className="mb-3 text-center text-xs font-semibold text-caution">
-            ⚠️ Please complete the checklist above to proceed.
+             Please complete the checklist above to proceed.
           </p>
         )}
         <a

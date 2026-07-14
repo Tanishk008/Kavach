@@ -13,7 +13,11 @@ type Item = { label: string; to?: string; href?: string; hint?: string };
 const ITEMS: Item[] = [
   { label: "Home", to: "/home" },
   { label: "Risk map", to: "/risk-map", hint: "View scam hotspots near you" },
-  { label: "My reports", to: "/report", hint: "Past checks and case history" },
+  { label: "Check a number", to: "/check-number", hint: "Caller ID & fraud lookup" },
+  { label: "Check Message & Voice", to: "/check-message", hint: "Text & AI voice deepfake detection" },
+  { label: "Check UPI ID", to: "/check-upi", hint: "Verify UPI before sending money" },
+  { label: "Activity History", to: "/history", hint: "Past scans and activity log" },
+  { label: "Report a scam", to: "/report", hint: "File a cyber complaint" },
   { label: "Block lost or stolen phone", to: "/block-phone" },
   { label: "WhatsApp bot", to: "/check-message", hint: "Chat with the Kavach bot" },
   { label: "Call the helpline", href: "tel:1930", hint: "Toll-free IVR" },

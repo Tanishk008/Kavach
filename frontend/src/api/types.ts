@@ -1,6 +1,53 @@
 import type { Tier } from "../theme/tokens";
 export type { Tier };
 
+export interface OcrResponse {
+  extracted_text: string;
+}
+
+// ── User & History Types ────────────────────────────────────────────────────
+export interface UserEvent {
+  id: string;
+  input_type: string;
+  tier: "safe" | "caution" | "high_risk";
+  created_at: string;
+  content_excerpt?: string;
+  scam_type?: string;
+}
+
+export interface ScoreResponse {
+  score: number;
+}
+
+export interface LiveAlert {
+  id: string;
+  scam_type: string;
+  region_city: string;
+  created_at: string;
+}
+
+export interface OCRExtractResponse {
+  text: string;
+  lines: string[];
+  confidence: number;
+}
+
+export interface BotAction {
+  label: string;
+  route: string;
+}
+
+export interface BotChatRequest {
+  message: string;
+}
+
+export interface BotChatResponse {
+  response: string;
+  actions: BotAction[];
+}
+
+
+
 export interface PlaybookStep {
   order: number;
   text: string;
@@ -73,11 +120,37 @@ export interface NumberCheckResponse {
 
 export interface PayCheckResponse {
   identifier: string;
+  identifier_type: "upi" | "phone" | "account" | "unknown";
   flagged: boolean;
   report_count: number;
   cluster_ref: string | null;
   cluster_victim_count: number | null;
   explanation: string;
+  // UPI enrichment
+  dataset_flagged: boolean;
+  upi_handle_trust: string | null;  // verified | unverified | null
+  upi_institution: string | null;   // Bank/app name if handle verified
+  pattern_score: number;            // 0-100
+  pattern_signals: string[];        // Suspicious keyword matches
+  risk_score: number;               // 0-100
+  verdict: string;                  // safe | suspicious | flagged
+  tips: string[];
+  raw_records: string[];
+  emergency_contacts: Array<{ label: string; value: string; action: string }>;
+}
+
+export interface FraudDirectoryPreview {
+  counts: Record<"upi" | "phone" | "account", number>;
+  samples: Record<"upi" | "phone" | "account", string[]>;
+}
+
+export interface VoiceAnalysisResponse {
+  verdict: "human" | "ai_generated" | "uncertain";
+  confidence: number;
+  signals: string[];
+  advice: string;
+  duration_seconds: number | null;
+  processing_note: string | null;
 }
 
 export interface CurrencyCheckResponse {

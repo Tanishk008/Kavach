@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
+import BackHeader from "../components/BackHeader";
 import { api } from "../api/client";
 
 interface CaseFileResponse {
@@ -27,7 +28,7 @@ export default function ReportScam() {
 
   return (
     <Layout>
-      <h1 className="mb-3 text-xl font-semibold text-ink">Report a scam</h1>
+      <BackHeader title="Report a Scam" subtitle="Generate a tamper-evident case file" />
       <textarea
         className="input min-h-[96px] resize-none"
         rows={4}

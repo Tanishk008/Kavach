@@ -19,6 +19,10 @@ dist/
 *.tsbuildinfo
 *.local
 
+# Tools
+ngrok
+
+
 # OS / editor
 .DS_Store
 .idea/

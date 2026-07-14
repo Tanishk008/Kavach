@@ -1,27 +1,28 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { numbers } from "../api/kavach";
-import type { NumberCheckResponse, NumberVerdict } from "../api/types";
+import BackHeader from "../components/BackHeader";
+import { numbers, pay, users } from "../api/kavach";
+import type { FraudDirectoryPreview, NumberCheckResponse, NumberVerdict } from "../api/types";
+import { ShieldIcon, AlertTriangleIcon, UserIcon, PhoneIcon, MessageIcon } from "../components/Icons";
 
 // ─────────────────────────────────────────────────────────────────
 // COUNTRY DATA
 // ─────────────────────────────────────────────────────────────────
 const COUNTRIES = [
-  { code: "+91",  flag: "🇮🇳", name: "India",        digits: 10, risk: "low" },
-  { code: "+92",  flag: "🇵🇰", name: "Pakistan",     digits: 10, risk: "high" },
-  { code: "+880", flag: "🇧🇩", name: "Bangladesh",   digits: 10, risk: "high" },
-  { code: "+86",  flag: "🇨🇳", name: "China",        digits: 11, risk: "high" },
-  { code: "+234", flag: "🇳🇬", name: "Nigeria",      digits: 10, risk: "high" },
-  { code: "+1",   flag: "🇺🇸", name: "USA / Canada", digits: 10, risk: "low" },
-  { code: "+44",  flag: "🇬🇧", name: "UK",           digits: 10, risk: "low" },
-  { code: "+971", flag: "🇦🇪", name: "UAE",          digits: 9,  risk: "medium" },
-  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia", digits: 9,  risk: "medium" },
-  { code: "+94",  flag: "🇱🇰", name: "Sri Lanka",    digits: 9,  risk: "medium" },
-  { code: "+977", flag: "🇳🇵", name: "Nepal",        digits: 10, risk: "medium" },
-  { code: "+95",  flag: "🇲🇲", name: "Myanmar",      digits: 9,  risk: "high" },
-  { code: "+7",   flag: "🇷🇺", name: "Russia",       digits: 10, risk: "medium" },
-  { code: "+60",  flag: "🇲🇾", name: "Malaysia",     digits: 9,  risk: "medium" },
+  { code: "+91",  flag: "", name: "India",        digits: 10, risk: "low" },
+  { code: "+92",  flag: "", name: "Pakistan",     digits: 10, risk: "high" },
+  { code: "+880", flag: "", name: "Bangladesh",   digits: 10, risk: "high" },
+  { code: "+86",  flag: "", name: "China",        digits: 11, risk: "high" },
+  { code: "+234", flag: "", name: "Nigeria",      digits: 10, risk: "high" },
+  { code: "+1",   flag: "", name: "USA / Canada", digits: 10, risk: "low" },
+  { code: "+44",  flag: "", name: "UK",           digits: 10, risk: "low" },
+  { code: "+971", flag: "", name: "UAE",          digits: 9,  risk: "medium" },
+  { code: "+966", flag: "", name: "Saudi Arabia", digits: 9,  risk: "medium" },
+  { code: "+94",  flag: "", name: "Sri Lanka",    digits: 9,  risk: "medium" },
+  { code: "+977", flag: "", name: "Nepal",        digits: 10, risk: "medium" },
+  { code: "+95",  flag: "", name: "Myanmar",      digits: 9,  risk: "high" },
+  { code: "+7",   flag: "", name: "Russia",       digits: 10, risk: "medium" },
+  { code: "+60",  flag: "", name: "Malaysia",     digits: 9,  risk: "medium" },
 ];
 
 // Offline-only, coarse circle hint used SOLELY when the backend is
@@ -46,34 +47,34 @@ function offlineCircleHint(num: string): string | null {
 // VERDICT CONFIG (visual design — unchanged)
 // ─────────────────────────────────────────────────────────────────
 type VerdictCfg = {
-  icon: string; label: string; color: string;
+  icon: React.ReactNode; label: string; color: string;
   bg: string; border: string; bar: string;
   urgency: string; bgGrad: string;
 };
 
 const VERDICT_CFG: Record<NumberVerdict, VerdictCfg> = {
   verified: {
-    icon: "✅", label: "Safe & Verified", color: "text-safe",
+    icon: <ShieldIcon className="w-5 h-5 text-current" />, label: "Safe & Verified", color: "text-safe",
     bg: "bg-safe-bg", border: "border-safe", bar: "bg-safe",
     urgency: "none", bgGrad: "from-[#E9F5E5] to-[#f0faf0]",
   },
   reported_scam: {
-    icon: "🚨", label: "Confirmed Scam", color: "text-highrisk",
+    icon: <AlertTriangleIcon className="w-5 h-5 text-current" />, label: "Confirmed Scam", color: "text-highrisk",
     bg: "bg-highrisk-bg", border: "border-highrisk", bar: "bg-highrisk",
     urgency: "critical", bgGrad: "from-[#FBE9E7] to-[#fff0ef]",
   },
   high_risk_pattern: {
-    icon: "⚠️", label: "High Risk", color: "text-caution",
+    icon: <AlertTriangleIcon className="w-5 h-5 text-current" />, label: "High Risk", color: "text-caution",
     bg: "bg-caution-bg", border: "border-caution", bar: "bg-caution",
     urgency: "high", bgGrad: "from-[#FDF1DC] to-[#fffbf2]",
   },
   unwanted_not_confirmed: {
-    icon: "📵", label: "Spam / Unwanted", color: "text-caution",
+    icon: <PhoneIcon className="w-5 h-5 text-current" />, label: "Spam / Unwanted", color: "text-caution",
     bg: "bg-caution-bg", border: "border-caution", bar: "bg-caution",
     urgency: "medium", bgGrad: "from-[#FDF1DC] to-[#fffbf2]",
   },
   unknown_neutral: {
-    icon: "✅", label: "No Reports Found", color: "text-safe",
+    icon: <ShieldIcon className="w-5 h-5 text-current" />, label: "No Reports Found", color: "text-safe",
     bg: "bg-safe-bg", border: "border-safe", bar: "bg-safe",
     urgency: "none", bgGrad: "from-[#E9F5E5] to-[#f0faf0]",
   },
@@ -99,20 +100,20 @@ const NUMBER_TYPE_LABEL: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────
 // SCAM TYPE DISPLAY META
 // ─────────────────────────────────────────────────────────────────
-const SCAM_META: Record<string, { label: string; icon: string; cls: string }> = {
-  digital_arrest:      { label: "Digital Arrest",       icon: "🚔", cls: "bg-highrisk-bg text-highrisk" },
-  kyc_fraud:            { label: "KYC Fraud",             icon: "🪪", cls: "bg-highrisk-bg text-highrisk" },
-  investment_fraud:     { label: "Investment Scam",       icon: "📈", cls: "bg-caution-bg text-caution"  },
-  delivery_customs:     { label: "Fake Courier",          icon: "📦", cls: "bg-caution-bg text-caution"  },
-  bank_impersonation:   { label: "Bank Impersonation",    icon: "🏦", cls: "bg-highrisk-bg text-highrisk" },
-  lottery_fraud:        { label: "Lottery / Prize",       icon: "🎰", cls: "bg-caution-bg text-caution"  },
-  otp_theft:            { label: "OTP Theft",             icon: "🔑", cls: "bg-highrisk-bg text-highrisk" },
-  loan_fraud:           { label: "Loan Recovery Threats", icon: "💰", cls: "bg-caution-bg text-caution"  },
-  utility_disconnection:{ label: "Utility Disconnection", icon: "💡", cls: "bg-caution-bg text-caution"  },
-  task_job:             { label: "Task / Job Scam",       icon: "📋", cls: "bg-caution-bg text-caution"  },
-  international_scam:   { label: "International Scam",   icon: "🌐", cls: "bg-highrisk-bg text-highrisk" },
-  spam:                 { label: "Spam / Marketing",      icon: "📣", cls: "bg-canvas text-muted"         },
-  impersonation:        { label: "Impersonation",         icon: "🎭", cls: "bg-highrisk-bg text-highrisk" },
+const SCAM_META: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
+  digital_arrest:      { label: "Digital Arrest",       icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
+  kyc_fraud:            { label: "KYC Fraud",             icon: <UserIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
+  investment_fraud:     { label: "Investment Scam",       icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  delivery_customs:     { label: "Fake Courier",          icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  bank_impersonation:   { label: "Bank Impersonation",    icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
+  lottery_fraud:        { label: "Lottery / Prize",       icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  otp_theft:            { label: "OTP Theft",             icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
+  loan_fraud:           { label: "Loan Recovery Threats", icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  utility_disconnection:{ label: "Utility Disconnection", icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  task_job:             { label: "Task / Job Scam",       icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution-bg text-caution"  },
+  international_scam:   { label: "International Scam",   icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
+  spam:                 { label: "Spam / Marketing",      icon: <MessageIcon className="w-4 h-4 text-current"/>, cls: "bg-canvas text-muted"         },
+  impersonation:        { label: "Impersonation",         icon: <UserIcon className="w-4 h-4 text-current"/>, cls: "bg-highrisk-bg text-highrisk" },
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -193,6 +194,17 @@ function saveHistory(item: HistoryItem) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
 }
 
+function splitDatasetPhone(raw: string): { dialCode: string; number: string } {
+  const digits = raw.replace(/\D/g, "");
+  const country = [...COUNTRIES]
+    .sort((a, b) => b.code.length - a.code.length)
+    .find((c) => digits.startsWith(c.code.replace("+", "")) && digits.length > c.digits);
+  if (country) {
+    return { dialCode: country.code, number: digits.slice(country.code.replace("+", "").length) };
+  }
+  return { dialCode: "+91", number: digits.slice(-10) };
+}
+
 // ─────────────────────────────────────────────────────────────────
 // LOADING STEPS (animated scan phases)
 // ─────────────────────────────────────────────────────────────────
@@ -207,8 +219,6 @@ const SCAN_STEPS = [
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────
 export default function CheckNumber() {
-  const navigate = useNavigate();
-
   const [dialCode, setDialCode] = useState("+91");
   const [number, setNumber]     = useState("");
   const [showPicker, setShowPicker]   = useState(false);
@@ -221,6 +231,7 @@ export default function CheckNumber() {
   const [reported, setReported] = useState(false);
   const [blocked,  setBlocked]  = useState(false);
   const [history, setHistory]   = useState<HistoryItem[]>(getHistory);
+  const [directory, setDirectory] = useState<FraudDirectoryPreview | null>(null);
 
   const inputRef  = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -246,6 +257,14 @@ export default function CheckNumber() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    pay.directory()
+      .then((data) => { if (mounted) setDirectory(data); })
+      .catch(() => { if (mounted) setDirectory(null); });
+    return () => { mounted = false; };
+  }, []);
+
   const check = async () => {
     if (!canCheck) return;
     setResult(null);
@@ -267,6 +286,7 @@ export default function CheckNumber() {
       const res = await numbers.check(dialCode + trimmed);
       setResult(res);
       saveHistory({ dialCode, number: trimmed, verdict: res.verdict, ts: Date.now() });
+      users.incrementScore(5).catch(console.error);
     } catch {
       const res = offlineFallback(dialCode, trimmed);
       setResult(res);
@@ -301,21 +321,10 @@ export default function CheckNumber() {
 
   return (
     <Layout>
-      {/* ── PAGE HEADER ── */}
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-muted transition hover:bg-canvas"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-ink">Number Checker</h1>
-          <p className="text-xs text-muted">Powered by Kavach community database</p>
-        </div>
-      </div>
+      <BackHeader
+        title="Number Checker"
+        subtitle="Powered by Kavach community database"
+      />
 
       {/* ── INPUT CARD ── */}
       <div className="card mb-4">
@@ -387,7 +396,7 @@ export default function CheckNumber() {
 
         {country.risk === "high" && (
           <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-highrisk/8 px-3 py-1.5">
-            <span className="text-sm">⚠️</span>
+            <span className="text-sm"></span>
             <p className="text-xs font-medium text-highrisk">
               {country.name} numbers are frequently used in cross-border fraud targeting India
             </p>
@@ -440,7 +449,7 @@ export default function CheckNumber() {
       {/* ── OFFLINE NOTICE ── */}
       {result && isOffline && !loading && (
         <div className="mb-3 flex items-center gap-2 rounded-card border border-caution/40 bg-caution-bg px-3 py-2">
-          <span className="text-sm">📡</span>
+          <span className="text-sm"></span>
           <p className="text-xs font-medium text-caution">
             Offline estimate — could not reach the Kavach server. This is not a live database check.
           </p>
@@ -453,7 +462,7 @@ export default function CheckNumber() {
           <div className={`bg-gradient-to-br ${cfg.bgGrad} px-4 pt-4 pb-4`}>
             <div className="flex items-start gap-3">
               <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 ${cfg.border} ${cfg.bg} text-2xl`}>
-                {cfg.urgency === "critical" ? "☠️" : cfg.urgency === "high" ? "⚠️" : cfg.icon}
+                {cfg.urgency === "critical" ? "" : cfg.urgency === "high" ? "" : cfg.icon}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -483,7 +492,7 @@ export default function CheckNumber() {
                   )}
                 </div>
                 {result.circle_note && (
-                  <p className="mt-1 text-[10px] leading-snug text-muted italic">ℹ️ {result.circle_note}</p>
+                  <p className="mt-1 text-[10px] leading-snug text-muted italic"> {result.circle_note}</p>
                 )}
               </div>
 
@@ -526,7 +535,7 @@ export default function CheckNumber() {
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {result.top_categories.map((cat) => {
-                  const m = SCAM_META[cat] ?? { label: cat, icon: "⚡", cls: "bg-canvas text-muted" };
+                  const m = SCAM_META[cat] ?? { label: cat, icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-canvas text-muted" };
                   return (
                     <span key={cat} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${m.cls}`}>
                       {m.icon} {m.label}
@@ -545,7 +554,7 @@ export default function CheckNumber() {
               </p>
               <div className="space-y-2">
                 {result.category_breakdown.map(({ category, label, pct }) => {
-                  const m = SCAM_META[category] ?? { label, icon: "⚡", cls: "bg-caution text-caution" };
+                  const m = SCAM_META[category] ?? { label, icon: <AlertTriangleIcon className="w-4 h-4 text-current"/>, cls: "bg-caution text-caution" };
                   return (
                     <div key={category}>
                       <div className="mb-0.5 flex justify-between text-xs">
@@ -588,7 +597,7 @@ export default function CheckNumber() {
                   reported ? "opacity-50" : "hover:bg-canvas"
                 }`}
               >
-                <span className="text-lg">{reported ? "✅" : "🚩"}</span>
+                <span className="text-lg">{reported ? "" : ""}</span>
                 <span className="text-[10px] font-semibold text-muted">
                   {reported ? "Reported" : "Report"}
                 </span>
@@ -598,7 +607,7 @@ export default function CheckNumber() {
                 onClick={() => setBlocked((v) => !v)}
                 className="flex flex-col items-center gap-1 py-3 text-center transition hover:bg-canvas"
               >
-                <span className="text-lg">{blocked ? "🔓" : "🚫"}</span>
+                <span className="text-lg">{blocked ? "" : ""}</span>
                 <span className={`text-[10px] font-semibold ${blocked ? "text-safe" : "text-muted"}`}>
                   {blocked ? "Unblock" : "Block"}
                 </span>
@@ -608,7 +617,7 @@ export default function CheckNumber() {
                 href={`tel:${dialCode}${number.replace(/\D/g, "")}`}
                 className="flex flex-col items-center gap-1 py-3 text-center transition hover:bg-canvas"
               >
-                <span className="text-lg">📞</span>
+                <span className="text-lg"></span>
                 <span className="text-[10px] font-semibold text-muted">Call</span>
               </a>
             </div>
@@ -621,7 +630,7 @@ export default function CheckNumber() {
                   rel="noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-card bg-highrisk/8 py-2.5 text-sm font-semibold text-highrisk transition hover:bg-highrisk/15"
                 >
-                  🛡️ Report to National Cyber Crime Portal
+                   Report to National Cyber Crime Portal
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
                   </svg>
@@ -661,7 +670,7 @@ export default function CheckNumber() {
           <div className="space-y-2">
             {history.map((h) => {
               const c = VERDICT_CFG[h.verdict];
-              const flag = COUNTRIES.find((x) => x.code === h.dialCode)?.flag ?? "🌐";
+              const flag = COUNTRIES.find((x) => x.code === h.dialCode)?.flag ?? "";
               return (
                 <button
                   key={h.number + h.ts}
@@ -694,16 +703,49 @@ export default function CheckNumber() {
         </div>
       )}
 
+      {/* ── KNOWN FRAUD NUMBERS ── */}
+      {!result && !loading && directory && (
+        <div className="mb-4 rounded-card border border-highrisk/20 bg-highrisk/5 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-highrisk">Known Fraud Numbers</p>
+              <p className="mt-0.5 text-xs text-muted">Loaded from your fraud phone dataset.</p>
+            </div>
+            <span className="rounded-full border border-highrisk/20 bg-highrisk/10 px-2 py-1 text-[10px] font-bold text-highrisk">
+              {directory.counts.phone.toLocaleString("en-IN")}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {directory.samples.phone.slice(0, 6).map((phone) => (
+              <button
+                key={phone}
+                type="button"
+                onClick={() => {
+                  const parsed = splitDatasetPhone(phone);
+                  setDialCode(parsed.dialCode);
+                  setNumber(parsed.number);
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                }}
+                className="rounded-md border border-highrisk/15 bg-surface px-3 py-2 text-left"
+              >
+                <p className="truncate text-sm font-bold text-ink">{phone}</p>
+                <p className="text-[10px] font-bold uppercase text-highrisk">Fraud dataset</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── HOW IT WORKS ── */}
       {!result && !loading && (
         <div className="rounded-card border border-hairline bg-canvas px-4 py-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted">⚡ How Kavach Checks Numbers</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted"> How Kavach Checks Numbers</p>
           <div className="space-y-2">
             {[
-              { icon: "🗄️", text: "Cross-checks against our crowd-sourced fraud database of reported numbers" },
-              { icon: "🌐", text: "Flags international numbers from Pakistan, Bangladesh, Nigeria & other high-risk origins" },
-              { icon: "📡", text: "Recognises TRAI number series — 140 (telemarketing) and 1600/1601 (verified bank/government)" },
-              { icon: "👥", text: "Shows the original telecom circle a number's series was allocated to (not the current operator — see MNP note)" },
+              { icon: "", text: "Cross-checks against our crowd-sourced fraud database of reported numbers" },
+              { icon: "", text: "Flags international numbers from Pakistan, Bangladesh, Nigeria & other high-risk origins" },
+              { icon: "", text: "Recognises TRAI number series — 140 (telemarketing) and 1600/1601 (verified bank/government)" },
+              { icon: "", text: "Shows the original telecom circle a number's series was allocated to (not the current operator — see MNP note)" },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
                 <span className="text-sm">{item.icon}</span>

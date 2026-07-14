@@ -1,4 +1,5 @@
 import Layout from "../components/Layout";
+import BackHeader from "../components/BackHeader";
 import { HeadsetIcon, MapPinIcon, MessageIcon, PhoneIcon, SearchIcon, ShieldIcon } from "../components/Icons";
 
 const coreFeatures = [
@@ -48,6 +49,7 @@ const safeguards = [
 export default function HelplineInfo() {
   return (
     <Layout>
+      <BackHeader title="About Kavach" subtitle="Your AI shield against digital fraud" />
       <section className="mb-5 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-cream text-navy">
           <ShieldIcon className="h-8 w-8" />

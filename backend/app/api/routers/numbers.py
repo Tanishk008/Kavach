@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.upi_fraud_data import fraud_directory_preview
 from app.schemas.numbers import (
     NumberCheckRequest,
     NumberCheckResponse,
@@ -26,6 +27,11 @@ def check_number(req: NumberCheckRequest, db: Session = Depends(get_db)) -> Numb
 @router.post("/pay/check", response_model=PayCheckResponse)
 def check_before_pay(req: PayCheckRequest, db: Session = Depends(get_db)) -> PayCheckResponse:
     return number_intel.reverse_fraud_search(db, req.identifier.strip())
+
+
+@router.get("/pay/directory")
+def payment_fraud_directory() -> dict:
+    return fraud_directory_preview()
 
 
 @router.post("/reports", response_model=ReportResponse)

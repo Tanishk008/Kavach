@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
+import BackHeader from "../components/BackHeader";
 import { UserIcon } from "../components/Icons";
 
 // Read profile from localStorage or use defaults
@@ -67,8 +68,9 @@ export default function Profile() {
 
   return (
     <Layout>
+      <BackHeader title="My Profile" subtitle="Settings & emergency contact" />
       {/* ── Hero avatar strip ── */}
-      <div className="relative -mx-4 -mt-4 mb-6 bg-gradient-to-br from-navy to-navy-dark px-6 pb-6 pt-8 text-white">
+      <div className="relative -mx-4 mt-0 mb-6 bg-gradient-to-br from-navy to-navy-dark px-6 pb-6 pt-8 text-white">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-3">
           <button

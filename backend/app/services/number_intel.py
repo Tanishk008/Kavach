@@ -30,6 +30,16 @@ from app.core.number_meta import (
     MNP_CAVEAT,
     classify_number_shape,
 )
+from app.core.upi_fraud_data import (
+    EMERGENCY_FRAUD_CONTACTS,
+    HANDLE_TRUST_VERIFIED,
+    fraud_directory_samples,
+    get_handle_trust,
+    is_known_fraud_account,
+    is_known_fraud_phone,
+    is_known_fraud_upi,
+    suspicious_pattern_score,
+)
 from app.models import CommunityReport, VerifiedNumber
 from app.schemas.common import NumberVerdict
 from app.schemas.numbers import (
@@ -44,6 +54,18 @@ _TIPS = [
     "Real agencies never demand payment to avoid arrest.",
     "If pressured, hang up and call the official number yourself.",
 ]
+
+
+def _identifier_type(identifier: str) -> str:
+    value = identifier.strip()
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if "@" in value:
+        return "upi"
+    if 10 <= len(digits) <= 13 and (value.startswith("+") or len(digits) == 10):
+        return "phone"
+    if 9 <= len(digits) <= 18:
+        return "account"
+    return "unknown"
 
 
 def _lookup_reports(db: Session, identifier: str) -> tuple[int, list[str], list[CategoryBreakdown]]:
@@ -246,16 +268,118 @@ def check_number(db: Session, raw_number: str) -> NumberCheckResponse:
 
 def reverse_fraud_search(db: Session, identifier: str) -> PayCheckResponse:
     """B.1 — check a UPI id / account / phone before paying."""
-    count, _, _ = _lookup_reports(db, identifier)
-    if count > 0:
+    identifier = identifier.strip()
+    identifier_type = _identifier_type(identifier)
+    lookup_key = identifier
+    if identifier_type in {"phone", "account"}:
+        lookup_key = "".join(ch for ch in identifier if ch.isdigit())
+    count, _, _ = _lookup_reports(db, lookup_key)
+
+    is_upi = identifier_type == "upi"
+    if is_upi:
+        dataset_hit = is_known_fraud_upi(identifier)
+    elif identifier_type == "phone":
+        dataset_hit = is_known_fraud_phone(identifier)
+    elif identifier_type == "account":
+        dataset_hit = is_known_fraud_account(identifier)
+    else:
+        dataset_hit = False
+
+    pattern_score_val, pattern_signals_val = suspicious_pattern_score(identifier) if is_upi else (0, [])
+    handle_trust, upi_institution = get_handle_trust(identifier) if is_upi else (None, None)
+    raw_records = fraud_directory_samples(identifier_type)
+    emergency_contacts = list(EMERGENCY_FRAUD_CONTACTS)
+
+    _UPI_SAFE_TIPS = [
+        "Always call the recipient directly to confirm their UPI ID before sending large amounts.",
+        "Official banks and government departments never ask you to pay via UPI for verification or fines.",
+        "Never enter your UPI PIN to 'receive' money — PIN is only needed to send.",
+        "If scammed, report immediately to 1930 (National Cyber Crime Helpline).",
+    ]
+    _PAYMENT_TIPS = [
+        "Confirm the beneficiary name and account details through a known, trusted contact.",
+        "Do not pay fines, KYC fees, courier charges, or release fees demanded on urgent calls.",
+        "If money was sent, call 1930 immediately and ask your bank to freeze the transaction trail.",
+    ]
+
+    # ── FLAGGED: in hardcoded fraud dataset ─────────────────────────────────
+    if dataset_hit:
+        risk = min(99, 85 + min(10, count * 2))
+        label = {"upi": "UPI ID", "phone": "phone number", "account": "bank account"}.get(identifier_type, "identifier")
         return PayCheckResponse(
-            identifier=identifier, flagged=True, report_count=count,
-            # TODO: cross-check the fraud graph for cluster membership + victim count
-            explanation=f"Flagged — linked to {count} victim report(s). Do not pay; verify first.",
+            identifier=identifier, identifier_type=identifier_type,
+            flagged=True, report_count=count,
+            dataset_flagged=True,
+            upi_handle_trust=handle_trust, upi_institution=upi_institution,
+            pattern_score=pattern_score_val, pattern_signals=pattern_signals_val,
+            risk_score=risk, verdict="flagged",
+            explanation=(
+                f"This {label} is in Kavach's fraud directory and has been linked to scam activity "
+                f"in published cybercrime advisories."
+                + (f" Additionally, {count} community report(s) exist for this ID." if count else "")
+            ),
+            tips=_UPI_SAFE_TIPS if is_upi else _PAYMENT_TIPS,
+            raw_records=raw_records,
+            emergency_contacts=emergency_contacts,
         )
+
+    # ── FLAGGED: community reports ───────────────────────────────────────────
+    if count > 0:
+        risk = min(99, 30 + count * 12 + pattern_score_val // 3)
+        return PayCheckResponse(
+            identifier=identifier, identifier_type=identifier_type,
+            flagged=True, report_count=count,
+            dataset_flagged=False,
+            upi_handle_trust=handle_trust, upi_institution=upi_institution,
+            pattern_score=pattern_score_val, pattern_signals=pattern_signals_val,
+            risk_score=risk, verdict="flagged",
+            # TODO: cross-check the fraud graph for cluster membership + victim count
+            explanation=f"Flagged — linked to {count} community report(s). Do not pay; verify first.",
+            tips=_UPI_SAFE_TIPS if is_upi else _PAYMENT_TIPS,
+            raw_records=raw_records,
+            emergency_contacts=emergency_contacts,
+        )
+
+    # ── SUSPICIOUS: pattern keywords (no reports yet) ────────────────────────
+    if pattern_score_val >= 40:
+        return PayCheckResponse(
+            identifier=identifier, identifier_type=identifier_type,
+            flagged=False, report_count=0,
+            dataset_flagged=False,
+            upi_handle_trust=handle_trust, upi_institution=upi_institution,
+            pattern_score=pattern_score_val, pattern_signals=pattern_signals_val,
+            risk_score=pattern_score_val, verdict="suspicious",
+            explanation=(
+                f"This UPI ID contains keywords commonly used in scam UPI handles ("
+                f"{', '.join(pattern_signals_val[:3])}). No community reports yet, but proceed with extreme caution."
+            ),
+            tips=_UPI_SAFE_TIPS,
+            raw_records=raw_records,
+            emergency_contacts=emergency_contacts,
+        )
+
+    # ── SAFE: no signals ─────────────────────────────────────────────────────
+    trust_note = ""
+    if is_upi and handle_trust == HANDLE_TRUST_VERIFIED and upi_institution:
+        trust_note = f" The bank handle (@{identifier.split('@')[1]}) belongs to {upi_institution} (verified)."
+    elif is_upi:
+        trust_note = f" The bank handle is not in our verified list — double-check the UPI ID directly with the recipient."
+    elif identifier_type == "phone":
+        trust_note = " No direct phone fraud report matched, but caller ID can be spoofed."
+    elif identifier_type == "account":
+        trust_note = " No direct bank-account report matched; verify beneficiary name before transfer."
+
     return PayCheckResponse(
-        identifier=identifier, flagged=False,
-        explanation="No red flags found — but always verify independently before paying.",
+        identifier=identifier, identifier_type=identifier_type,
+        flagged=False, report_count=0,
+        dataset_flagged=False,
+        upi_handle_trust=handle_trust, upi_institution=upi_institution,
+        pattern_score=0, pattern_signals=[],
+        risk_score=5 if identifier_type != "unknown" else 18, verdict="safe",
+        explanation=f"No fraud reports or suspicious patterns found for this identifier.{trust_note} Always verify independently before paying.",
+        tips=_UPI_SAFE_TIPS if is_upi else _PAYMENT_TIPS,
+        raw_records=raw_records,
+        emergency_contacts=emergency_contacts,
     )
 
 

@@ -86,7 +86,7 @@ export default function OtpVerify() {
           gap: "12px",
         }}
       >
-        <span style={{ fontSize: "22px" }}>🔐</span>
+        <span style={{ fontSize: "22px" }}></span>
         <div>
           <p
             style={{

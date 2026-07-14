@@ -3,7 +3,7 @@
  * Connects to the /intelligence/* endpoints.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+import { BASE_URL } from "./client";
 
 export interface CrimeEvent {
   id: string;

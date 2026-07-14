@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-5"
 
     # CORS
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # OTP SMS delivery — not used in demo mode
     sms_provider: str = ""
@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
+    twilio_whatsapp_number: str = ""  # e.g. whatsapp:+14155238886 (Twilio sandbox)
 
     # ── Intelligence Pipeline ──────────────────────────────────────────────
 
@@ -51,6 +52,9 @@ class Settings(BaseSettings):
 
     # Gemini API key for AI extraction
     gemini_api_key: str = ""
+    
+    # Groq API key for LLM Bot
+    groq_api_key: str = ""
 
     # Pipeline scheduler interval in minutes (default: 30)
     pipeline_interval_minutes: int = 30

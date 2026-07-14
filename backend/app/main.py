@@ -20,6 +20,12 @@ from app.api.routers import (
     hotspot,
     messages,
     numbers,
+    ocr,
+    voice,
+    bot,
+    users,
+    feed,
+    whatsapp,
 )
 from app.api.routers import intelligence as intelligence_router
 from app.intelligence.scheduler import (
@@ -52,6 +58,24 @@ async def lifespan(app: FastAPI):
         loop = asyncio.get_event_loop()
         logger.info("[startup] Running initial pipeline pass...")
         loop.run_in_executor(None, run_pipeline)
+
+    # Warm up librosa / numba in background so the first voice analysis is fast
+    import asyncio as _asyncio
+    def _warmup_librosa():
+        try:
+            import librosa as _librosa
+            import numpy as _np
+            # Load a tiny 0.1-second silent buffer through the most-used feature calls
+            _y = _np.zeros(1600, dtype=_np.float32)   # 0.1 s at 16 kHz
+            _librosa.feature.mfcc(y=_y, sr=16000, n_mfcc=20)
+            _librosa.feature.spectral_centroid(y=_y, sr=16000)
+            _librosa.feature.rms(y=_y)
+            _librosa.feature.zero_crossing_rate(_y)
+            logger.info("[startup] librosa warmup complete.")
+        except Exception as exc:
+            logger.warning("[startup] librosa warmup skipped: %s", exc)
+    loop = _asyncio.get_event_loop()
+    loop.run_in_executor(None, _warmup_librosa)
 
     yield
 
@@ -87,9 +111,27 @@ app.include_router(currency.router)
 app.include_router(evidence.router)
 app.include_router(hotspot.router)
 app.include_router(graph.router)
+app.include_router(voice.router)
+app.include_router(ocr.router)
+app.include_router(bot.router)
+app.include_router(users.router)
+app.include_router(feed.router)
 
 # ── Intelligence pipeline routers ──────────────────────────────────────────
 app.include_router(intelligence_router.router)
+
+# ── WhatsApp Bot ────────────────────────────────────────────────────────────
+app.include_router(whatsapp.router)
+
+
+@app.get("/", tags=["system"])
+def root() -> dict:
+    return {
+        "status": "ok",
+        "service": "kavach-backend",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
 
 @app.get("/health", tags=["system"])
